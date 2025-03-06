@@ -1,11 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { AuthContext } from '../context/AuthContext';
+import styles from '../styles/styles';
 
 export default function BudgetScreen({ navigation }) {
     const { token, user, login } = useContext(AuthContext);
     const [income, setIncome] = useState(user?.income ? user.income.toString() : '');
-    const [budgetFrequency, setBudgetFrequency] = useState(user?.budgetFrequency || '');
+    const [budgetFrequency, setBudgetFrequency] = useState(user?.budgetFrequency || 'monthly');
     const [category, setCategory] = useState('');
     const [allocatedAmount, setAllocatedAmount] = useState('');
     const [budgets, setBudgets] = useState([]);
@@ -41,7 +43,7 @@ export default function BudgetScreen({ navigation }) {
                 },
                 body: JSON.stringify({
                     income: parseFloat(income),
-                    budgetFrequency: budgetFrequency.toLowerCase()
+                    budgetFrequency
                 })
             });
             const data = await res.json();
@@ -88,7 +90,7 @@ export default function BudgetScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Budget Setup</Text>
-            <Text style={styles.subtitle}>Set Your Income and Budget Frequency</Text>
+            <Text style={styles.subtitle}>Set Your Income and Pay Frequency</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Enter your income"
@@ -96,13 +98,18 @@ export default function BudgetScreen({ navigation }) {
                 value={income}
                 onChangeText={setIncome}
             />
-            <TextInput
+            <Text style={styles.label}>Pay Frequency:</Text>
+            <Picker
+                selectedValue={budgetFrequency}
+                onValueChange={(itemValue) => setBudgetFrequency(itemValue)}
                 style={styles.input}
-                placeholder="Enter frequency: weekly, bi-weekly, or monthly"
-                value={budgetFrequency}
-                onChangeText={setBudgetFrequency}
-            />
+                mode="dropdown">
+                <Picker.Item label="Weekly" value="weekly" />
+                <Picker.Item label="Bi-Weekly" value="bi-weekly" />
+                <Picker.Item label="Monthly" value="monthly" />
+            </Picker>
             <Button title="Update Profile" onPress={updateProfile} />
+
             <Text style={styles.subtitle}>Set Category Budgets</Text>
             <TextInput
                 style={styles.input}
@@ -118,6 +125,7 @@ export default function BudgetScreen({ navigation }) {
                 onChangeText={setAllocatedAmount}
             />
             <Button title="Set/Update Budget" onPress={handleSetBudget} />
+
             <Text style={styles.subtitle}>Current Budgets:</Text>
             <FlatList
                 data={budgets}
@@ -125,7 +133,7 @@ export default function BudgetScreen({ navigation }) {
                 renderItem={({ item }) => (
                     <View style={styles.budgetItem}>
                         <Text style={styles.budgetText}>
-                            {item.category} - Allocated: ${item.allocatedAmount}, Spent: ${item.spent}, Remaining: ${item.remaining}
+                            {item.category}: Allocated ${item.allocatedAmount}, Spent ${item.spent}, Remaining ${item.remaining}
                         </Text>
                     </View>
                 )}
@@ -135,11 +143,4 @@ export default function BudgetScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20 },
-    title: { fontSize: 22, marginBottom: 10, textAlign: 'center' },
-    subtitle: { fontSize: 18, marginBottom: 5 },
-    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 10, marginBottom: 10 },
-    budgetItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' },
-    budgetText: { fontSize: 16 }
-});
+

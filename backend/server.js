@@ -5,6 +5,7 @@ const db = require('./models');
 const authRoutes = require('./routes/auth');
 const receiptRoutes = require('./routes/receipts');
 const budgetRoutes = require('./routes/budgets');
+const spendingRoutes = require('./routes/spending');
 
 const app = express();
 app.use(cors());

@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { View, Text, Button, Image, StyleSheet, Alert, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../context/AuthContext';
+import styles from '../styles/styles';
 
 export default function ReceiptScreen() {
     const { token } = useContext(AuthContext);
@@ -74,13 +75,4 @@ export default function ReceiptScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { padding: 20, alignItems: 'center' },
-    title: { fontSize: 22, marginVertical: 10 },
-    imagePreview: { width: 300, height: 300, marginVertical: 10 },
-    resultBox: {
-        marginTop: 20, padding: 10,
-        borderWidth: 1, borderColor: '#ccc', borderRadius: 4,
-        width: '100%'
-    }
-});
+
