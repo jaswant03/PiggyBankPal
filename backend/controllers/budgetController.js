@@ -7,7 +7,6 @@ exports.setOrUpdateBudget = async (req, res) => {
         if (!category || allocatedAmount == null) {
             return res.status(400).json({ error: 'Category and allocatedAmount required' });
         }
-        // For simplicity, one Budget record per category (not user-specific)
         let budget = await Budget.findOne({ where: { category } });
         if (budget) {
             budget.allocatedAmount = allocatedAmount;
@@ -24,7 +23,6 @@ exports.setOrUpdateBudget = async (req, res) => {
 
 exports.getBudgetSummary = async (req, res) => {
     try {
-        // Summation of all receipts by category for this user
         const receipts = await Receipt.findAll({
             where: { userId: req.user.id },
             include: [{ model: ReceiptItem, as: 'items' }]
@@ -49,13 +47,29 @@ exports.getBudgetSummary = async (req, res) => {
             };
         });
 
-        // Also retrieve user monthly income
         const user = await User.findByPk(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        let effectiveIncome = user.income || 0;
+        switch (user.budgetFrequency) {
+            case 'weekly':
+                effectiveIncome = effectiveIncome * 4;
+                break;
+            case 'bi-weekly':
+                effectiveIncome = effectiveIncome * 2;
+                break;
+            case 'monthly':
+            default:
+                break;
+        }
+
         const totalSpent = Object.values(spentMap).reduce((acc, val) => acc + val, 0);
-        const remainingIncome = user.monthlyIncome - totalSpent;
+        const remainingIncome = effectiveIncome - totalSpent;
 
         res.json({
-            monthlyIncome: user.monthlyIncome,
+            income: user.income,
+            budgetFrequency: user.budgetFrequency,
+            effectiveIncome,
             totalSpent,
             remainingIncome,
             budgets: result

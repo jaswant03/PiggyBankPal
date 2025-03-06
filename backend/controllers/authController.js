@@ -4,13 +4,14 @@ const jwt = require('jsonwebtoken');
 
 exports.signup = async (req, res) => {
     try {
-        const { name, email, password, monthlyIncome } = req.body;
+        const { name, email, password } = req.body;
         const hashed = await bcrypt.hash(password, 10);
         const user = await User.create({
             name,
             email,
             password: hashed,
-            monthlyIncome: monthlyIncome || 0
+            income: null,
+            budgetFrequency: null
         });
         res.status(201).json({ message: 'User created', userId: user.id });
     } catch (err) {
@@ -26,7 +27,7 @@ exports.login = async (req, res) => {
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-        const token = jwt.sign({ id: user.id }, 'SECRET_KEY', { expiresIn: '1d' }); // Use env var
+        const token = jwt.sign({ id: user.id }, 'SECRET_KEY', { expiresIn: '1d' });
         res.json({
             message: 'Logged in',
             token,
@@ -34,11 +35,27 @@ exports.login = async (req, res) => {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                monthlyIncome: user.monthlyIncome
+                income: user.income,
+                budgetFrequency: user.budgetFrequency
             }
         });
     } catch (err) {
         console.error("Login error:", err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const { income, budgetFrequency } = req.body;
+        const user = await User.findByPk(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        user.income = income;
+        user.budgetFrequency = budgetFrequency;
+        await user.save();
+        res.json({ message: 'Profile updated', user });
+    } catch (err) {
+        console.error("Update profile error:", err);
         res.status(500).json({ error: 'Server error' });
     }
 };

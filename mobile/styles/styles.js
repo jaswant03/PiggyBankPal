@@ -1,4 +1,3 @@
-// styles.js
 import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
@@ -30,4 +29,20 @@ export default StyleSheet.create({
         borderRadius: 4,
         padding: 10
     },
+    infoTitle: {
+        fontWeight: 'bold',
+        marginBottom: 5
+    },
+    subtitle: {
+        fontSize: 18,
+        marginBottom: 5
+    },
+    budgetItem: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc'
+    },
+    budgetText: {
+        fontSize: 16
+    }
 });

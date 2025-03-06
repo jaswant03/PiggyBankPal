@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
         name: { type: DataTypes.STRING, allowNull: false },
         email: { type: DataTypes.STRING, unique: true, allowNull: false },
         password: { type: DataTypes.STRING, allowNull: false },
-        monthlyIncome: { type: DataTypes.FLOAT, defaultValue: 0 }
+        income: { type: DataTypes.FLOAT, allowNull: true },
+        budgetFrequency: { type: DataTypes.STRING, allowNull: true } // 'weekly', 'bi-weekly', or 'monthly'
     });
 
     User.associate = models => {

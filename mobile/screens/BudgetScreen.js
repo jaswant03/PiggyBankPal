@@ -2,8 +2,10 @@ import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, FlatList, Alert } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 
-export default function BudgetScreen() {
-    const { token } = useContext(AuthContext);
+export default function BudgetScreen({ navigation }) {
+    const { token, user, login } = useContext(AuthContext);
+    const [income, setIncome] = useState(user?.income ? user.income.toString() : '');
+    const [budgetFrequency, setBudgetFrequency] = useState(user?.budgetFrequency || '');
     const [category, setCategory] = useState('');
     const [allocatedAmount, setAllocatedAmount] = useState('');
     const [budgets, setBudgets] = useState([]);
@@ -28,6 +30,32 @@ export default function BudgetScreen() {
     useEffect(() => {
         getBudgets();
     }, []);
+
+    const updateProfile = async () => {
+        try {
+            const res = await fetch('http://localhost:3000/api/auth/updateProfile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    income: parseFloat(income),
+                    budgetFrequency: budgetFrequency.toLowerCase()
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                login(token, data.user);
+                Alert.alert('Success', 'Profile updated');
+            } else {
+                Alert.alert('Error', data.error || 'Unknown error');
+            }
+        } catch (err) {
+            console.error(err);
+            Alert.alert('Error', 'Could not connect to server');
+        }
+    };
 
     const handleSetBudget = async () => {
         try {
@@ -59,23 +87,37 @@ export default function BudgetScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Budgets</Text>
-            <View style={styles.form}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Category (e.g. Groceries)"
-                    value={category}
-                    onChangeText={setCategory}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Allocated Amount"
-                    keyboardType="numeric"
-                    value={allocatedAmount}
-                    onChangeText={setAllocatedAmount}
-                />
-                <Button title="Set/Update Budget" onPress={handleSetBudget} />
-            </View>
+            <Text style={styles.title}>Budget Setup</Text>
+            <Text style={styles.subtitle}>Set Your Income and Budget Frequency</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Enter your income"
+                keyboardType="numeric"
+                value={income}
+                onChangeText={setIncome}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Enter frequency: weekly, bi-weekly, or monthly"
+                value={budgetFrequency}
+                onChangeText={setBudgetFrequency}
+            />
+            <Button title="Update Profile" onPress={updateProfile} />
+            <Text style={styles.subtitle}>Set Category Budgets</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Category (e.g. Groceries)"
+                value={category}
+                onChangeText={setCategory}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Allocated Amount"
+                keyboardType="numeric"
+                value={allocatedAmount}
+                onChangeText={setAllocatedAmount}
+            />
+            <Button title="Set/Update Budget" onPress={handleSetBudget} />
             <Text style={styles.subtitle}>Current Budgets:</Text>
             <FlatList
                 data={budgets}
@@ -88,6 +130,7 @@ export default function BudgetScreen() {
                     </View>
                 )}
             />
+            <Button title="Go Home" onPress={() => navigation.navigate('Home')} />
         </View>
     );
 }
@@ -95,14 +138,8 @@ export default function BudgetScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20 },
     title: { fontSize: 22, marginBottom: 10, textAlign: 'center' },
-    form: { marginBottom: 20 },
-    input: {
-        borderWidth: 1, borderColor: '#ccc', borderRadius: 4,
-        padding: 10, marginBottom: 10
-    },
     subtitle: { fontSize: 18, marginBottom: 5 },
-    budgetItem: {
-        padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc'
-    },
+    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 10, marginBottom: 10 },
+    budgetItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' },
     budgetText: { fontSize: 16 }
 });

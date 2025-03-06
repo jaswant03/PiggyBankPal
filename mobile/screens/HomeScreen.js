@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, Button, StyleSheet } from 'react-native';
-import { AuthContext } from '../context/AuthContext';
 import styles from '../styles/styles';
+import { AuthContext } from '../context/AuthContext';
 
 export default function HomeScreen({ navigation }) {
     const { user, token, logout } = useContext(AuthContext);
@@ -31,22 +31,38 @@ export default function HomeScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Welcome, {user?.name}</Text>
-            {summary && (
-                <View style={styles.infoBox}>
-                    <Text>Monthly Income: ${summary.monthlyIncome.toFixed(2)}</Text>
-                    <Text>Total Spent: ${summary.totalSpent.toFixed(2)}</Text>
-                    <Text>Remaining Income: ${summary.remainingIncome.toFixed(2)}</Text>
+            {(!user.income || !user.budgetFrequency) ? (
+                <View style={styles.buttonContainer}>
+                    <Button title="Start Budgeting" onPress={() => navigation.navigate('Budget')} />
                 </View>
+            ) : (
+                <>
+                    <View style={styles.infoBox}>
+                        <Text style={styles.infoTitle}>Budget Snapshot:</Text>
+                        {user.budgetFrequency === 'weekly' && (
+                            <Text>Weekly Budget: ${Number(user.income).toFixed(2)}</Text>
+                        )}
+                        {user.budgetFrequency === 'bi-weekly' && (
+                            <Text>Bi-Weekly Budget: ${Number(user.income).toFixed(2)}</Text>
+                        )}
+                        {user.budgetFrequency === 'monthly' && (
+                            <Text>Monthly Budget: ${Number(user.income).toFixed(2)}</Text>
+                        )}
+                    </View>
+                    {summary && (
+                        <View style={styles.infoBox}>
+                            <Text>Total Spent: ${summary.totalSpent.toFixed(2)}</Text>
+                            <Text>Remaining Income: ${summary.remainingIncome.toFixed(2)}</Text>
+                            {summary.budgets.map((b, idx) => (
+                                <Text key={idx}>
+                                    {b.category}: Allocated ${b.allocatedAmount}, Spent ${b.spent}, Remaining ${b.remaining}
+                                </Text>
+                            ))}
+                        </View>
+                    )}
+                </>
             )}
-            <View style={styles.buttonContainer}>
-                <Button title="Budgets" onPress={() => navigation.navigate('Budget')} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Upload Receipt" onPress={() => navigation.navigate('Receipt')} />
-            </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Log Out" onPress={logout} />
-            </View>
+            <Button title="Log Out" onPress={logout} />
         </View>
     );
 }
