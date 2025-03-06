@@ -1,5 +1,6 @@
+// backend/controllers/budgetController.js
 const { Budget, ReceiptItem, Receipt, User, ManualSpending } = require('../models');
-const { Sequelize, Op } = require('sequelize');
+const { Op } = require('sequelize');
 
 exports.setOrUpdateBudget = async (req, res) => {
     try {
@@ -23,42 +24,19 @@ exports.setOrUpdateBudget = async (req, res) => {
 
 exports.getBudgetSummary = async (req, res) => {
     try {
-        // Determine timeline based on query or user settings
-        const timeline = req.query.timeline || req.user.budgetFrequency || 'monthly';
-        const now = new Date();
-        let days;
-        switch (timeline) {
-            case 'weekly':
-                days = 7;
-                break;
-            case 'bi-weekly':
-                days = 14;
-                break;
-            case 'monthly':
-            default:
-                days = 30;
-                break;
-        }
-        const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        // "timeline" is the snapshot frequency (weekly, bi-weekly, monthly)
+        const timeline = req.query.timeline || 'monthly';
 
-        // Get receipts within the timeline period
+        // Fetch all receipts and manual spending (no date filter)
         const receipts = await Receipt.findAll({
-            where: {
-                userId: req.user.id,
-                date: { [Op.gte]: startDate }
-            },
+            where: { userId: req.user.id },
             include: [{ model: ReceiptItem, as: 'items' }]
         });
-
-        // Get manual spending entries within the timeline period
         const manualSpendings = await ManualSpending.findAll({
-            where: {
-                userId: req.user.id,
-                date: { [Op.gte]: startDate }
-            }
+            where: { userId: req.user.id }
         });
 
-        // Combine spending from receipts and manual spendings
+        // Combine spending per category
         const spentMap = {};
         receipts.forEach(r => {
             r.items.forEach(item => {
@@ -71,7 +49,7 @@ exports.getBudgetSummary = async (req, res) => {
             spentMap[ms.category] += ms.amount;
         });
 
-        // Get all budgets
+        // Fetch budgets and compute remaining amounts
         const budgets = await Budget.findAll();
         const result = budgets.map(b => {
             const spent = spentMap[b.category] || 0;
@@ -87,18 +65,33 @@ exports.getBudgetSummary = async (req, res) => {
         const user = await User.findByPk(req.user.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Calculate effective income based on frequency.
-        let effectiveIncome = user.income || 0;
+        // Convert base income to a weekly equivalent based on user.budgetFrequency
+        let weeklyEquivalent = 0;
         switch (user.budgetFrequency) {
             case 'weekly':
-                effectiveIncome = effectiveIncome; // Income is per week.
+                weeklyEquivalent = user.income;
                 break;
             case 'bi-weekly':
-                effectiveIncome = effectiveIncome; // Income is per two weeks.
+                weeklyEquivalent = user.income / 2;
                 break;
             case 'monthly':
             default:
-                effectiveIncome = effectiveIncome; // Income is per month.
+                weeklyEquivalent = user.income / 4;
+                break;
+        }
+
+        // Scale weeklyEquivalent to the snapshot timeline
+        let effectiveIncome = 0;
+        switch (timeline) {
+            case 'weekly':
+                effectiveIncome = weeklyEquivalent;
+                break;
+            case 'bi-weekly':
+                effectiveIncome = weeklyEquivalent * 2;
+                break;
+            case 'monthly':
+            default:
+                effectiveIncome = weeklyEquivalent * 4;
                 break;
         }
 
@@ -106,9 +99,9 @@ exports.getBudgetSummary = async (req, res) => {
         const remainingIncome = effectiveIncome - totalSpent;
 
         res.json({
-            income: user.income,
-            budgetFrequency: user.budgetFrequency,
-            timeline, // timeline used for snapshot
+            baseIncome: user.income,
+            baseFrequency: user.budgetFrequency,
+            timeline,
             effectiveIncome,
             totalSpent,
             remainingIncome,

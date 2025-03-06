@@ -1,13 +1,15 @@
+// mobile/screens/HomeScreen.js
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet, Platform } from 'react-native';
+import { View, Text, Button, StyleSheet } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { AuthContext } from '../context/AuthContext';
+import styles from '../styles/styles'; // your shared styles, if any
 
 export default function HomeScreen({ navigation }) {
     const { user, token, logout } = useContext(AuthContext);
     const [summary, setSummary] = useState(null);
 
-    // Action dropdown states
+    // Action dropdown state
     const [actionOpen, setActionOpen] = useState(false);
     const [actionValue, setActionValue] = useState(null);
     const [actionItems, setActionItems] = useState([
@@ -17,7 +19,7 @@ export default function HomeScreen({ navigation }) {
         { label: 'Logout', value: 'logout' },
     ]);
 
-    // Timeline dropdown states
+    // Timeline dropdown state
     const [timelineOpen, setTimelineOpen] = useState(false);
     const [timelineValue, setTimelineValue] = useState(user?.budgetFrequency || 'monthly');
     const [timelineItems, setTimelineItems] = useState([
@@ -26,7 +28,7 @@ export default function HomeScreen({ navigation }) {
         { label: 'Monthly', value: 'monthly' },
     ]);
 
-    // Fetch budget summary from backend
+    // Fetch budget summary from backend (using timeline query)
     const fetchSummary = async (duration) => {
         try {
             const res = await fetch(`http://localhost:3000/api/budgets?timeline=${duration}`, {
@@ -50,7 +52,7 @@ export default function HomeScreen({ navigation }) {
         }
     }, [user, timelineValue]);
 
-    // Handle the selected action from the header dropdown
+    // Handle header dropdown actions
     const handleAction = (val) => {
         switch (val) {
             case 'scanReceipt':
@@ -68,17 +70,15 @@ export default function HomeScreen({ navigation }) {
             default:
                 break;
         }
-        setActionValue(null); // reset to placeholder
+        setActionValue(null); // reset dropdown to placeholder
     };
 
     return (
-        <View style={styles.screen}>
+        <View style={stylesApp.screen}>
             {/* Header Bar */}
-            <View style={styles.headerBar}>
-                <Text style={styles.headerTitle}>PiggyBankPal</Text>
-
-                {/* Relative container for the dropdown */}
-                <View style={styles.actionDropdownContainer}>
+            <View style={stylesApp.headerBar}>
+                <Text style={stylesApp.headerTitle}>PiggyBankPal</Text>
+                <View style={stylesApp.actionDropdownContainer}>
                     <DropDownPicker
                         open={actionOpen}
                         value={actionValue}
@@ -87,8 +87,8 @@ export default function HomeScreen({ navigation }) {
                         setValue={setActionValue}
                         setItems={setActionItems}
                         placeholder="Select Action"
-                        style={styles.actionDropdown}
-                        dropDownContainerStyle={styles.actionDropdownMenu}
+                        style={stylesApp.actionDropdown}
+                        dropDownContainerStyle={stylesApp.actionDropdownMenu}
                         onChangeValue={(val) => val && handleAction(val)}
                         zIndex={3000}
                         zIndexInverse={1000}
@@ -97,20 +97,17 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Main Content */}
-            <View style={styles.contentWrapper}>
-                <Text style={styles.greeting}>Welcome, {user?.name || 'User'}</Text>
+            <View style={stylesApp.contentWrapper}>
+                <Text style={stylesApp.greeting}>Welcome, {user?.name || 'User'}</Text>
 
-                <View style={styles.card}>
+                <View style={stylesApp.card}>
                     {(!user?.income || !user?.budgetFrequency) ? (
-                        <Button
-                            title="Start Budgeting"
-                            onPress={() => navigation.navigate('Budget')}
-                        />
+                        <Button title="Start Budgeting" onPress={() => navigation.navigate('Budget')} />
                     ) : (
                         <>
-                            <Text style={styles.subTitle}>Budget Snapshot</Text>
-                            {/* Timeline dropdown container */}
-                            <View style={styles.timelineDropdownContainer}>
+                            <Text style={stylesApp.subTitle}>Budget Snapshot</Text>
+                            {/* Timeline Dropdown */}
+                            <View style={stylesApp.timelineDropdownContainer}>
                                 <DropDownPicker
                                     open={timelineOpen}
                                     value={timelineValue}
@@ -119,44 +116,51 @@ export default function HomeScreen({ navigation }) {
                                     setValue={setTimelineValue}
                                     setItems={setTimelineItems}
                                     placeholder="Select Timeline"
-                                    style={styles.timelineDropdown}
-                                    dropDownContainerStyle={styles.timelineDropdownMenu}
+                                    style={stylesApp.timelineDropdown}
+                                    dropDownContainerStyle={stylesApp.timelineDropdownMenu}
                                     zIndex={2500}
                                     zIndexInverse={1200}
+                                    onChangeValue={(val) => setTimelineValue(val)}
                                 />
                             </View>
-
                             {summary ? (
-                                <View>
-                                    <Text style={styles.infoText}>
+                                <View style={stylesApp.tableContainer}>
+                                    <Text style={stylesApp.infoText}>
                                         {timelineValue.charAt(0).toUpperCase() + timelineValue.slice(1)} Income: $
                                         {summary.effectiveIncome.toFixed(2)}
                                     </Text>
-                                    <Text style={styles.infoText}>
+                                    <Text style={stylesApp.infoText}>
                                         Total Spent: ${summary.totalSpent.toFixed(2)}
                                     </Text>
-                                    <Text style={styles.infoText}>
+                                    <Text style={stylesApp.infoText}>
                                         Remaining Income: ${summary.remainingIncome.toFixed(2)}
                                     </Text>
-
                                     {/* Table Header */}
-                                    <View style={styles.tableHeader}>
-                                        <Text style={[styles.tableCell, styles.tableHeaderText]}>Category</Text>
-                                        <Text style={[styles.tableCell, styles.tableHeaderText]}>Allocated</Text>
-                                        <Text style={[styles.tableCell, styles.tableHeaderText]}>Spent</Text>
-                                        <Text style={[styles.tableCell, styles.tableHeaderText]}>Remaining</Text>
+                                    <View style={stylesApp.tableHeader}>
+                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
+                                            Category
+                                        </Text>
+                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
+                                            Allocated
+                                        </Text>
+                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
+                                            Spent
+                                        </Text>
+                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
+                                            Remaining
+                                        </Text>
                                     </View>
                                     {summary.budgets.map((b, idx) => (
-                                        <View key={idx} style={styles.tableRow}>
-                                            <Text style={styles.tableCell}>{b.category}</Text>
-                                            <Text style={styles.tableCell}>${b.allocatedAmount}</Text>
-                                            <Text style={styles.tableCell}>${b.spent}</Text>
-                                            <Text style={styles.tableCell}>${b.remaining}</Text>
+                                        <View key={idx} style={stylesApp.tableRow}>
+                                            <Text style={stylesApp.tableCell}>{b.category}</Text>
+                                            <Text style={stylesApp.tableCell}>${b.allocatedAmount}</Text>
+                                            <Text style={stylesApp.tableCell}>${b.spent}</Text>
+                                            <Text style={stylesApp.tableCell}>${b.remaining}</Text>
                                         </View>
                                     ))}
                                 </View>
                             ) : (
-                                <Text style={styles.infoText}>Loading snapshot...</Text>
+                                <Text style={stylesApp.infoText}>Loading snapshot...</Text>
                             )}
                         </>
                     )}
@@ -166,7 +170,7 @@ export default function HomeScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const stylesApp = StyleSheet.create({
     screen: {
         flex: 1,
         backgroundColor: '#F3F4F7',
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#0D6EFD',
         paddingHorizontal: 15,
         paddingVertical: 15,
-        zIndex: 3000, // ensures the header is on top
+        zIndex: 3000,
     },
     headerTitle: {
         flex: 1,
@@ -187,8 +191,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     actionDropdownContainer: {
-        // So the dropdown is not cut off on web
-        position: Platform.OS === 'web' ? 'relative' : 'relative',
+        position: 'relative',
         zIndex: 3000,
         width: 160,
     },
@@ -201,7 +204,6 @@ const styles = StyleSheet.create({
     contentWrapper: {
         flex: 1,
         padding: 20,
-        zIndex: 1,
     },
     greeting: {
         fontSize: 20,
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
     },
     timelineDropdownContainer: {
         marginBottom: 15,
-        position: Platform.OS === 'web' ? 'relative' : 'relative',
+        position: 'relative',
         zIndex: 2500,
     },
     timelineDropdown: {
@@ -243,11 +245,13 @@ const styles = StyleSheet.create({
         marginVertical: 4,
         color: '#444444',
     },
+    tableContainer: {
+        marginTop: 10,
+    },
     tableHeader: {
         flexDirection: 'row',
         backgroundColor: '#F0F0F0',
         padding: 8,
-        marginTop: 10,
     },
     tableRow: {
         flexDirection: 'row',

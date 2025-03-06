@@ -1,38 +1,41 @@
+// mobile/screens/ManualSpendingScreen.js
 import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList } from 'react-native';
+import { View, Text, TextInput, Button, Alert, FlatList, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { AuthContext } from '../context/AuthContext';
-import styles from '../styles/styles';
 
 export default function ManualSpendingScreen({ navigation }) {
     const { token } = useContext(AuthContext);
-    const [budgets, setBudgets] = useState([]);
+    const [summary, setSummary] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [spendingAmount, setSpendingAmount] = useState('');
 
-    // Fetch the existing budget categories
-    const fetchBudgets = async () => {
+    // Fetch the full budget summary (which includes merged spending)
+    const fetchBudgetSummary = async () => {
         try {
             const res = await fetch('http://localhost:3000/api/budgets', {
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
             const data = await res.json();
             if (res.ok) {
-                setBudgets(data.budgets || []);
+                setSummary(data);
                 if (data.budgets && data.budgets.length > 0 && !selectedCategory) {
                     setSelectedCategory(data.budgets[0].category);
                 }
+            } else {
+                Alert.alert('Error', data.error || 'Unknown error');
             }
         } catch (err) {
             console.error(err);
+            Alert.alert('Error', 'Could not connect to server');
         }
     };
 
     useEffect(() => {
-        fetchBudgets();
+        fetchBudgetSummary();
     }, []);
 
     const handleAddSpending = async () => {
@@ -49,18 +52,18 @@ export default function ManualSpendingScreen({ navigation }) {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     category: selectedCategory,
-                    amount: parseFloat(spendingAmount)
-                })
+                    amount: parseFloat(spendingAmount),
+                }),
             });
             const data = await res.json();
             if (res.ok) {
                 Alert.alert('Success', 'Manual spending added');
                 setSpendingAmount('');
-                fetchBudgets(); // refresh budgets if needed
+                fetchBudgetSummary();
             } else {
                 Alert.alert('Error', data.error || 'Unknown error');
             }
@@ -71,46 +74,95 @@ export default function ManualSpendingScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Add Manual Spending</Text>
+        <View style={msStyles.container}>
+            <Text style={msStyles.title}>Add Manual Spending</Text>
 
-            <Text style={styles.label}>Select Category:</Text>
-            <Picker
-                selectedValue={selectedCategory}
-                onValueChange={(itemValue) => setSelectedCategory(itemValue)}
-                style={styles.input}
-                mode="dropdown"
-            >
-                {budgets.map((b) => (
-                    <Picker.Item key={b.category} label={b.category} value={b.category} />
-                ))}
-            </Picker>
+            <Text style={msStyles.label}>Select Category:</Text>
+            {summary && summary.budgets && summary.budgets.length > 0 ? (
+                <Picker
+                    selectedValue={selectedCategory}
+                    onValueChange={(itemValue) => setSelectedCategory(itemValue)}
+                    style={msStyles.input}
+                    mode="dropdown"
+                >
+                    {summary.budgets.map((b) => (
+                        <Picker.Item key={b.category} label={b.category} value={b.category} />
+                    ))}
+                </Picker>
+            ) : (
+                <Text>No budget categories found.</Text>
+            )}
 
             <TextInput
-                style={styles.input}
+                style={msStyles.input}
                 placeholder="Enter spending amount"
                 keyboardType="numeric"
                 value={spendingAmount}
                 onChangeText={setSpendingAmount}
             />
             <Button title="Add Spending" onPress={handleAddSpending} />
-            <View style={styles.spacer} />
+
+            <View style={msStyles.spacer} />
             <Button title="Go Home" onPress={() => navigation.navigate('Home')} />
 
-            {/* Optionally show current manual spendings if desired */}
-            <Text style={styles.subtitle}>Existing Budgets:</Text>
-            <FlatList
-                data={budgets}
-                keyExtractor={(item) => item.category}
-                renderItem={({ item }) => (
-                    <View style={styles.budgetItem}>
-                        <Text style={styles.budgetText}>
-                            {item.category}: Allocated ${item.allocatedAmount}
-                        </Text>
+            <Text style={msStyles.subtitle}>Current Budgets:</Text>
+            {summary && summary.budgets && summary.budgets.length > 0 ? (
+                <View style={msStyles.table}>
+                    <View style={msStyles.tableHeader}>
+                        <Text style={[msStyles.tableCell, msStyles.headerText]}>Category</Text>
+                        <Text style={[msStyles.tableCell, msStyles.headerText]}>Allocated</Text>
+                        <Text style={[msStyles.tableCell, msStyles.headerText]}>Spent</Text>
+                        <Text style={[msStyles.tableCell, msStyles.headerText]}>Remaining</Text>
                     </View>
-                )}
-            />
+                    {summary.budgets.map((b, idx) => (
+                        <View key={idx} style={msStyles.tableRow}>
+                            <Text style={msStyles.tableCell}>{b.category}</Text>
+                            <Text style={msStyles.tableCell}>${b.allocatedAmount}</Text>
+                            <Text style={msStyles.tableCell}>${b.spent}</Text>
+                            <Text style={msStyles.tableCell}>${b.remaining}</Text>
+                        </View>
+                    ))}
+                </View>
+            ) : (
+                <Text>No budgets found.</Text>
+            )}
         </View>
     );
 }
 
+const msStyles = StyleSheet.create({
+    container: {
+        flex: 1, padding: 20, backgroundColor: '#f3f4f7',
+    },
+    title: {
+        fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center',
+    },
+    label: {
+        fontSize: 16, marginBottom: 5,
+    },
+    input: {
+        borderWidth: 1, borderColor: '#ccc', borderRadius: 4,
+        padding: 10, marginBottom: 10, width: '100%',
+    },
+    spacer: { height: 10 },
+    subtitle: {
+        fontSize: 18, fontWeight: '600', marginVertical: 10,
+    },
+    table: {
+        width: '100%', marginTop: 10,
+    },
+    tableHeader: {
+        flexDirection: 'row', backgroundColor: '#f0f0f0',
+        padding: 8,
+    },
+    tableRow: {
+        flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#eee',
+        padding: 8,
+    },
+    headerText: {
+        fontWeight: 'bold',
+    },
+    tableCell: {
+        flex: 1, fontSize: 14,
+    },
+});
