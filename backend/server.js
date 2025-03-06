@@ -20,8 +20,8 @@ app.use('/api/receipts', receiptRoutes);
 app.use('/api/budgets', budgetRoutes);
 
 const PORT = process.env.PORT || 3000;
-db.sequelize.sync().then(() => {
-    console.log("DB synced");
+db.sequelize.sync({ force: true }).then(() => {
+    console.log("DB synced (force recreated)");
     app.listen(PORT, () => {
         console.log("Server running on port " + PORT);
     });

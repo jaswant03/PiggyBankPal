@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import styles from '../styles/styles';
 import { AuthContext } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
@@ -42,17 +43,14 @@ export default function LoginScreen({ navigation }) {
                 secureTextEntry
                 onChangeText={setPassword}
             />
-            <Button title="Login" onPress={handleLogin} />
-            <Button title="Go to Signup" onPress={() => navigation.navigate('Signup')} />
+            <View style={styles.buttonContainer}>
+                <Button title="Login" onPress={handleLogin} />
+            </View>
+            <View style={styles.buttonContainer}>
+                <Button title="Go to Signup" onPress={() => navigation.navigate('Signup')} />
+            </View>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', padding: 20 },
-    title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-    input: {
-        borderWidth: 1, borderColor: '#ccc', borderRadius: 4,
-        padding: 10, marginBottom: 10
-    }
-});
+

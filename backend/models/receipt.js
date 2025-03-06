@@ -2,7 +2,9 @@ module.exports = (sequelize, DataTypes) => {
     const Receipt = sequelize.define('Receipt', {
         date: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         totalAmount: { type: DataTypes.FLOAT, allowNull: false },
-        rawText: { type: DataTypes.TEXT }
+        rawText: { type: DataTypes.TEXT },
+        userId: { type: DataTypes.INTEGER, allowNull: false }
+
     });
 
     Receipt.associate = models => {
