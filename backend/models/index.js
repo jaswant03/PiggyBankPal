@@ -5,7 +5,18 @@ const basename = path.basename(__filename);
 
 const config = {
     dialect: 'sqlite',
-    storage: './database.sqlite'
+    storage: './database.sqlite',
+    dialectOptions: {
+        dateStrings: true,
+        typeCast: function (field, next) {
+            // For DATETIME fields, return the field as a string.
+            if (field.type === 'DATETIME') {
+                return field.string();
+            }
+            return next();
+        },
+    },
+    timezone: '+00:00', // Use your preferred timezone if needed.
 };
 
 const db = {};
