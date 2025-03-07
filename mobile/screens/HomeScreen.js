@@ -1,37 +1,34 @@
-// mobile/screens/HomeScreen.js
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Button, TouchableOpacity } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { AuthContext } from '../context/AuthContext';
-import styles from '../styles/styles'; // your shared styles, if any
 
 export default function HomeScreen({ navigation }) {
     const { user, token, logout } = useContext(AuthContext);
     const [summary, setSummary] = useState(null);
 
-    // Action dropdown state
+    // Dropdown for top actions
     const [actionOpen, setActionOpen] = useState(false);
     const [actionValue, setActionValue] = useState(null);
     const [actionItems, setActionItems] = useState([
         { label: 'Scan Receipt', value: 'scanReceipt' },
         { label: 'Add Manual Spending', value: 'manualSpending' },
-        { label: 'Update Budget Settings', value: 'updateBudget' },
+        { label: 'Update Budget', value: 'updateBudget' },
         { label: 'Logout', value: 'logout' },
     ]);
 
-    // Timeline dropdown state
-    const [timelineOpen, setTimelineOpen] = useState(false);
-    const [timelineValue, setTimelineValue] = useState(user?.budgetFrequency || 'monthly');
-    const [timelineItems, setTimelineItems] = useState([
+    // Dropdown for snapshot frequency
+    const [freqOpen, setFreqOpen] = useState(false);
+    const [freqValue, setFreqValue] = useState(user?.budgetFrequency || 'monthly');
+    const [freqItems, setFreqItems] = useState([
         { label: 'Weekly', value: 'weekly' },
         { label: 'Bi-Weekly', value: 'bi-weekly' },
         { label: 'Monthly', value: 'monthly' },
     ]);
 
-    // Fetch budget summary from backend (using timeline query)
-    const fetchSummary = async (duration) => {
+    const fetchSummary = async (freq) => {
         try {
-            const res = await fetch(`http://localhost:3000/api/budgets?timeline=${duration}`, {
+            const res = await fetch(`http://localhost:3000/api/budgets?timeline=${freq}`, {
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
@@ -47,12 +44,11 @@ export default function HomeScreen({ navigation }) {
     };
 
     useEffect(() => {
-        if (user && user.income && user.budgetFrequency) {
-            fetchSummary(timelineValue);
+        if (user?.income && user?.budgetFrequency) {
+            fetchSummary(freqValue);
         }
-    }, [user, timelineValue]);
+    }, [user, freqValue]);
 
-    // Handle header dropdown actions
     const handleAction = (val) => {
         switch (val) {
             case 'scanReceipt':
@@ -70,15 +66,15 @@ export default function HomeScreen({ navigation }) {
             default:
                 break;
         }
-        setActionValue(null); // reset dropdown to placeholder
+        setActionValue(null);
     };
 
     return (
-        <View style={stylesApp.screen}>
-            {/* Header Bar */}
-            <View style={stylesApp.headerBar}>
-                <Text style={stylesApp.headerTitle}>PiggyBankPal</Text>
-                <View style={stylesApp.actionDropdownContainer}>
+        <View style={styles.screen}>
+            {/* AppBar */}
+            <View style={styles.appBar}>
+                <Text style={styles.appBarTitle}>PiggyBankPal</Text>
+                <View style={styles.actionDropdown}>
                     <DropDownPicker
                         open={actionOpen}
                         value={actionValue}
@@ -86,185 +82,221 @@ export default function HomeScreen({ navigation }) {
                         setOpen={setActionOpen}
                         setValue={setActionValue}
                         setItems={setActionItems}
-                        placeholder="Select Action"
-                        style={stylesApp.actionDropdown}
-                        dropDownContainerStyle={stylesApp.actionDropdownMenu}
-                        onChangeValue={(val) => val && handleAction(val)}
+                        placeholder="Actions"
+                        style={styles.dropdownStyle}
+                        dropDownContainerStyle={styles.dropdownContainer}
+                        onChangeValue={(val) => handleAction(val)}
                         zIndex={3000}
                         zIndexInverse={1000}
                     />
                 </View>
             </View>
 
-            {/* Main Content */}
-            <View style={stylesApp.contentWrapper}>
-                <Text style={stylesApp.greeting}>Welcome, {user?.name || 'User'}</Text>
-
-                <View style={stylesApp.card}>
-                    {(!user?.income || !user?.budgetFrequency) ? (
-                        <Button title="Start Budgeting" onPress={() => navigation.navigate('Budget')} />
-                    ) : (
-                        <>
-                            <Text style={stylesApp.subTitle}>Budget Snapshot</Text>
-                            {/* Timeline Dropdown */}
-                            <View style={stylesApp.timelineDropdownContainer}>
+            {/* Content */}
+            <View style={styles.content}>
+                {!user?.income ? (
+                    <Text style={styles.infoText}>
+                        Please set your income in the Budget Setup first.
+                    </Text>
+                ) : (
+                    <>
+                        <View style={styles.headerRow}>
+                            <Text style={styles.greeting}>
+                                Hello, {user?.name || 'User'}
+                            </Text>
+                            <View style={{ width: 150 }}>
                                 <DropDownPicker
-                                    open={timelineOpen}
-                                    value={timelineValue}
-                                    items={timelineItems}
-                                    setOpen={setTimelineOpen}
-                                    setValue={setTimelineValue}
-                                    setItems={setTimelineItems}
-                                    placeholder="Select Timeline"
-                                    style={stylesApp.timelineDropdown}
-                                    dropDownContainerStyle={stylesApp.timelineDropdownMenu}
+                                    open={freqOpen}
+                                    value={freqValue}
+                                    items={freqItems}
+                                    setOpen={setFreqOpen}
+                                    setValue={setFreqValue}
+                                    setItems={setFreqItems}
+                                    placeholder="Snapshot"
+                                    style={styles.freqDropdown}
+                                    dropDownContainerStyle={styles.dropdownContainer}
                                     zIndex={2500}
                                     zIndexInverse={1200}
-                                    onChangeValue={(val) => setTimelineValue(val)}
                                 />
                             </View>
-                            {summary ? (
-                                <View style={stylesApp.tableContainer}>
-                                    <Text style={stylesApp.infoText}>
-                                        {timelineValue.charAt(0).toUpperCase() + timelineValue.slice(1)} Income: $
-                                        {summary.effectiveIncome.toFixed(2)}
-                                    </Text>
-                                    <Text style={stylesApp.infoText}>
-                                        Total Spent: ${summary.totalSpent.toFixed(2)}
-                                    </Text>
-                                    <Text style={stylesApp.infoText}>
-                                        Remaining Income: ${summary.remainingIncome.toFixed(2)}
-                                    </Text>
-                                    {/* Table Header */}
-                                    <View style={stylesApp.tableHeader}>
-                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
-                                            Category
+                        </View>
+
+                        {/* Summary Card */}
+                        {summary ? (
+                            <View style={styles.summaryCard}>
+                                <Text style={styles.summaryTitle}>
+                                    {freqValue.charAt(0).toUpperCase() + freqValue.slice(1)} Income: ${summary.effectiveIncome?.toFixed(2)}
+                                </Text>
+                                <Text style={styles.summaryText}>
+                                    Total Spent: ${summary.totalSpent?.toFixed(2)}
+                                </Text>
+                                <Text style={styles.summaryText}>
+                                    Remaining Income: ${summary.remainingIncome?.toFixed(2)}
+                                </Text>
+                            </View>
+                        ) : (
+                            <Text style={styles.infoText}>Loading your summary...</Text>
+                        )}
+
+                        {/* Category Cards */}
+                        <View style={styles.categoryContainer}>
+                            {summary?.budgets?.map((b, idx) => {
+                                // For better clarity, scale allocated if you want
+                                // e.g. let scaledAlloc = b.allocatedAmount * scaleFactor
+                                // but let's just show the allocated, spent, remaining from the summary
+                                return (
+                                    <View key={idx} style={styles.categoryCard}>
+                                        <Text style={styles.categoryTitle}>{b.category}</Text>
+                                        <Text style={styles.categoryAllocated}>
+                                            Allocated: ${b.allocatedAmount.toFixed(2)}
                                         </Text>
-                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
-                                            Allocated
+                                        <Text style={styles.categorySpent}>
+                                            Spent: ${b.spent.toFixed(2)}
                                         </Text>
-                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
-                                            Spent
-                                        </Text>
-                                        <Text style={[stylesApp.tableCell, stylesApp.tableHeaderText]}>
-                                            Remaining
+                                        <Text style={styles.categoryRemaining}>
+                                            Remaining: ${b.remaining.toFixed(2)}
                                         </Text>
                                     </View>
-                                    {summary.budgets.map((b, idx) => (
-                                        <View key={idx} style={stylesApp.tableRow}>
-                                            <Text style={stylesApp.tableCell}>{b.category}</Text>
-                                            <Text style={stylesApp.tableCell}>${b.allocatedAmount}</Text>
-                                            <Text style={stylesApp.tableCell}>${b.spent}</Text>
-                                            <Text style={stylesApp.tableCell}>${b.remaining}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <Text style={stylesApp.infoText}>Loading snapshot...</Text>
-                            )}
-                        </>
-                    )}
-                </View>
+                                );
+                            })}
+                        </View>
+
+                        {/* Add Spending Button */}
+                        <TouchableOpacity
+                            style={styles.addSpendingBtn}
+                            onPress={() => navigation.navigate('ManualSpending')}
+                        >
+                            <Text style={styles.addSpendingBtnText}>Add Manual Spending</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
         </View>
     );
 }
 
-const stylesApp = StyleSheet.create({
+const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        backgroundColor: '#F3F4F7',
+        backgroundColor: '#F2F1FE',
     },
-    headerBar: {
+    appBar: {
         flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#0D6EFD',
+        backgroundColor: '#7B61FF',
         paddingHorizontal: 15,
         paddingVertical: 15,
+        alignItems: 'center',
         zIndex: 3000,
     },
-    headerTitle: {
+    appBarTitle: {
         flex: 1,
+        color: '#FFF',
         fontSize: 22,
-        color: '#FFFFFF',
         fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    actionDropdownContainer: {
-        position: 'relative',
-        zIndex: 3000,
-        width: 160,
     },
     actionDropdown: {
+        width: 130,
+        zIndex: 3000,
+    },
+    dropdownStyle: {
         borderColor: '#FFFFFF',
     },
-    actionDropdownMenu: {
+    dropdownContainer: {
         borderColor: '#FFFFFF',
+        zIndex: 9999,
     },
-    contentWrapper: {
+    content: {
         flex: 1,
         padding: 20,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        zIndex: 2500,
     },
     greeting: {
         fontSize: 20,
-        fontWeight: '600',
-        marginBottom: 20,
-        textAlign: 'center',
-        color: '#333333',
+        fontWeight: 'bold',
+        color: '#333',
     },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 20,
+    freqDropdown: {
+        borderColor: '#ccc',
+    },
+    summaryCard: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 20,
+        // Shadow
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
-        zIndex: 1,
     },
-    subTitle: {
+    summaryTitle: {
         fontSize: 18,
         fontWeight: '600',
-        marginBottom: 10,
-        color: '#0D6EFD',
+        marginBottom: 5,
+        color: '#7B61FF',
     },
-    timelineDropdownContainer: {
-        marginBottom: 15,
-        position: 'relative',
-        zIndex: 2500,
-    },
-    timelineDropdown: {
-        borderColor: '#CCCCCC',
-    },
-    timelineDropdownMenu: {
-        borderColor: '#CCCCCC',
+    summaryText: {
+        fontSize: 16,
+        marginVertical: 2,
+        color: '#333',
     },
     infoText: {
         fontSize: 16,
-        marginVertical: 4,
-        color: '#444444',
+        color: '#666',
     },
-    tableContainer: {
-        marginTop: 10,
-    },
-    tableHeader: {
+    categoryContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F0F0F0',
-        padding: 8,
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
-    tableRow: {
-        flexDirection: 'row',
-        padding: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#EEEEEE',
+    categoryCard: {
+        width: '48%',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 15,
+        marginBottom: 15,
+        // shadow
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    tableHeaderText: {
+    categoryTitle: {
+        fontSize: 16,
         fontWeight: 'bold',
+        marginBottom: 5,
+        color: '#444',
     },
-    tableCell: {
-        flex: 1,
+    categoryAllocated: {
         fontSize: 14,
-        color: '#444444',
+        color: '#444',
+    },
+    categorySpent: {
+        fontSize: 14,
+        color: '#D9534F', // red-ish
+    },
+    categoryRemaining: {
+        fontSize: 14,
+        color: '#5CB85C', // green-ish
+    },
+    addSpendingBtn: {
+        backgroundColor: '#7B61FF',
+        borderRadius: 8,
+        paddingVertical: 15,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    addSpendingBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

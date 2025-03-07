@@ -19,6 +19,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/budgets', budgetRoutes);
+app.use('/api/spending', spendingRoutes); 
 
 const PORT = process.env.PORT || 3000;
 db.sequelize.sync({ force: true }).then(() => {

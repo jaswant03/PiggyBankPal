@@ -1,3 +1,4 @@
+// backend/controllers/spendingController.js
 const { ManualSpending } = require('../models');
 
 exports.addManualSpending = async (req, res) => {
@@ -6,10 +7,12 @@ exports.addManualSpending = async (req, res) => {
         if (!category || amount == null) {
             return res.status(400).json({ error: 'Category and amount are required' });
         }
+        // Set the date explicitly to current date/time
         const spending = await ManualSpending.create({
             userId: req.user.id,
             category,
-            amount
+            amount,
+            date: new Date()
         });
         res.status(201).json(spending);
     } catch (err) {

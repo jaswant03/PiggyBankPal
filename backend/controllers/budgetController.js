@@ -21,13 +21,11 @@ exports.setOrUpdateBudget = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
-
 exports.getBudgetSummary = async (req, res) => {
     try {
-        // "timeline" is the snapshot frequency (weekly, bi-weekly, monthly)
         const timeline = req.query.timeline || 'monthly';
 
-        // Fetch all receipts and manual spending (no date filter)
+        // Fetch all receipts and manual spending for the user (no date filter for simplicity)
         const receipts = await Receipt.findAll({
             where: { userId: req.user.id },
             include: [{ model: ReceiptItem, as: 'items' }]
@@ -49,49 +47,50 @@ exports.getBudgetSummary = async (req, res) => {
             spentMap[ms.category] += ms.amount;
         });
 
-        // Fetch budgets and compute remaining amounts
         const budgets = await Budget.findAll();
+        // Determine scaling factor for budgets based on timeline
+        let scaleFactor = 1;
+        switch (timeline) {
+            case 'weekly':
+                scaleFactor = 1 / 4;
+                break;
+            case 'bi-weekly':
+                scaleFactor = 1 / 2;
+                break;
+            case 'monthly':
+            default:
+                scaleFactor = 1;
+                break;
+        }
+
         const result = budgets.map(b => {
             const spent = spentMap[b.category] || 0;
             return {
                 category: b.category,
                 allocatedAmount: b.allocatedAmount,
+                allocatedScaled: b.allocatedAmount * scaleFactor,
                 spent,
-                remaining: b.allocatedAmount - spent
+                remaining: b.allocatedAmount - spent,
+                remainingScaled: (b.allocatedAmount - spent) * scaleFactor,
             };
         });
 
-        // Get the user record
         const user = await User.findByPk(req.user.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Convert base income to a weekly equivalent based on user.budgetFrequency
-        let weeklyEquivalent = 0;
-        switch (user.budgetFrequency) {
-            case 'weekly':
-                weeklyEquivalent = user.income;
-                break;
-            case 'bi-weekly':
-                weeklyEquivalent = user.income / 2;
-                break;
-            case 'monthly':
-            default:
-                weeklyEquivalent = user.income / 4;
-                break;
-        }
-
-        // Scale weeklyEquivalent to the snapshot timeline
+        // Scale income similar to budgets (assuming user.income is monthly)
+        const incomeWeekly = user.income / 4;
         let effectiveIncome = 0;
         switch (timeline) {
             case 'weekly':
-                effectiveIncome = weeklyEquivalent;
+                effectiveIncome = incomeWeekly;
                 break;
             case 'bi-weekly':
-                effectiveIncome = weeklyEquivalent * 2;
+                effectiveIncome = incomeWeekly * 2;
                 break;
             case 'monthly':
             default:
-                effectiveIncome = weeklyEquivalent * 4;
+                effectiveIncome = user.income;
                 break;
         }
 
@@ -105,7 +104,7 @@ exports.getBudgetSummary = async (req, res) => {
             effectiveIncome,
             totalSpent,
             remainingIncome,
-            budgets: result
+            budgets: result,
         });
     } catch (err) {
         console.error("Budget summary error:", err);
